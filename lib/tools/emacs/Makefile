@@ -86,3 +86,25 @@ release_docs_spec: docs
 	$(INSTALL_DATA) $(MAN_FILES) "$(RELEASE_PATH)/man/man3"
 endif
 endif
+
+EMACS ?= emacs
+
+test_indentation:
+	rm -f test.erl
+# For some reason, ignore-errors from subr.el doesn't get defined in time...
+	$(EMACS) --batch -Q -L . \
+		--eval '\
+	(defmacro ignore-errors (&rest body) \
+	   "Execute BODY; if an error occurs, return nil. \
+	 Otherwise, return result of last form in BODY." \
+	   (declare (debug t) (indent 0)) \
+	   `(condition-case nil (progn ,@body) (error nil))) \
+	 ' \
+		-l erlang-start test.erl.orig \
+		-f erlang-mode \
+		-f toggle-debug-on-error \
+		-f mark-whole-buffer \
+		-f indent-region \
+		--eval '(write-file "test.erl")'
+	diff -u test.erl.indented test.erl
+	@echo "No differences between expected and actual indentation"
